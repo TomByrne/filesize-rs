@@ -16,12 +16,16 @@ fn main() {
     let verbose =  matches.occurrences_of("verbose") > 0;
 
     println!("Reading size of path {}", path);
-    let size = get_size(path, &verbose);
-    println!("Size of {} is {}mb", path, size / 1000000);
+    get_size(path, &verbose, Some(&size_read));
 }
 
-fn get_size<P: AsRef<Path>+Copy>(path:P, verbose:&bool) -> u64 {
+fn size_read<P: AsRef<Path>>(path:P, size:u64) {
+    println!("Size of {} is {}mb", path.as_ref().display(), size / 1000000);
+}
+
+fn get_size<P: AsRef<Path>+Copy>(path:P, verbose:&bool, cb: Option<&dyn Fn(P, u64)>) -> u64 {
     let meta = metadata(path).unwrap();
+    let size;
     if meta.is_dir() {
 
         let files = read_dir(path).unwrap();
@@ -29,12 +33,15 @@ fn get_size<P: AsRef<Path>+Copy>(path:P, verbose:&bool) -> u64 {
         if *verbose { println!("   Reading in dir {}", path.as_ref().display()); }
 
         let mut total = 0;
-
         for entry in files {
-            total += get_size(&entry.unwrap().path(), verbose)
+            total += get_size(&entry.unwrap().path(), verbose, None)
         }
-        return total;
+        size = total;
     }else{
-        return meta.len();
+        size = meta.len();
     }
+    if let Some(callback) = cb {
+        callback(path, size);
+    }
+    return size;
 }
