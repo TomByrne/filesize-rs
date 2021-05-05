@@ -9,3 +9,6 @@ description = "Calculates the size of files / folders"
 
 [dependencies]
 clap = "3.0.0-beta.2"
+tinytemplate = "1.2.1"
+serde = "1.0.125"
+serde_derive = "1.0.125"
