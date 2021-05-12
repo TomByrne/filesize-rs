@@ -1,5 +1,5 @@
 [package]
-name = "filesize"
+name = "fstat-rs"
 version = "0.1.0"
 authors = ["Tom Byrne <tom.byrne@imagination.com>"]
 edition = "2018"

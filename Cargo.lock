@@ -62,7 +62,7 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "a694dae478589798d752c7125542f8a5ae8b6e59476172baf2eed67357bdfa27"
 
 [[package]]
-name = "filesize"
+name = "fstat-rs"
 version = "0.1.0"
 dependencies = [
  "clap",

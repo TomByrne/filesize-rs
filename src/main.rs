@@ -9,7 +9,7 @@ use tinytemplate::TinyTemplate;
 #[macro_use]
 extern crate serde_derive;
 
-struct FilesizeOpts {
+struct RunOptions {
     verbose: bool,
     recurse: bool,
     multithread: bool,
@@ -45,7 +45,7 @@ fn main() {
     // You can check the value provided by positional arguments, or option arguments
     let path = matches.value_of("path").unwrap();
 
-    let opts = FilesizeOpts {
+    let opts = RunOptions {
         multithread: (matches.occurrences_of("single-thread") == 0),
         verbose: (matches.occurrences_of("verbose") > 0),
         recurse: matches.occurrences_of("recurse") > 0,
@@ -66,7 +66,7 @@ fn main() {
     }
 }
 
-fn size_read(stats: &FileStats, opts: &FilesizeOpts) {
+fn size_read(stats: &FileStats, opts: &RunOptions) {
     let mut template = TinyTemplate::new();
     template.add_template("template", &opts.template).unwrap();
 
@@ -76,7 +76,7 @@ fn size_read(stats: &FileStats, opts: &FilesizeOpts) {
 
 fn check_path<P: AsRef<Path> + Copy>(
     path: P,
-    opts: &FilesizeOpts,
+    opts: &RunOptions,
     add: bool,
     results: &Mutex<Vec<FileStats>>,
 ) -> u64 {
