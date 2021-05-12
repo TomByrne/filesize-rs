@@ -1,10 +1,10 @@
 # `fstat-rs`
 
-This project is an exploration of the Rust language / tool chain, using a file system stat checker as a pretense.
+This project is an exploration of the Rust language / tool-chain, using a file system stat checker as a pretense.
 
 This isn't supposed to be used anywhere:
 - Hasn't been tested on different hardware/systems
-- Still contains a bunch of `unwrap()s`, so won't fail gracefully
+- Still contains a bunch of `unwrap()`s, so won't fail gracefully
 - Has very little documentation
 - Has no tests (yet, hopefully!)
 
