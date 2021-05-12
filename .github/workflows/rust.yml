@@ -27,4 +27,4 @@ jobs:
       uses: actions/upload-artifact@v2.2.3
       with:
         name: Windows Latest
-        path: target/release/fstat.rs.exe
+        path: target/release/fstat-rs.exe
