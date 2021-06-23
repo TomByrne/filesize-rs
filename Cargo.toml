@@ -1,5 +1,5 @@
 [package]
-name = "fstat-rs"
+name = "fstat"
 version = "0.1.0"
 authors = ["Tom Byrne <tom@tbyrne.org>"]
 edition = "2018"
