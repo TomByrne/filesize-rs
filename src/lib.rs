@@ -33,19 +33,13 @@ pub fn run(path: &str, opts: Options, system: &Arc<dyn FileSystem>) {
     let results_mutex = Mutex::new(Vec::new());
     check_path(path, &opts, system, true, &results_mutex);
 
-    let mut results = results_mutex.lock().unwrap();
-    results.sort_by(|a, b| a.path.to_lowercase().cmp(&b.path.to_lowercase()));
-    for stats in results.iter() {
-        render_output(stats, &opts);
+    if let Some(template) = &opts.template {
+        let mut results = results_mutex.lock().unwrap();
+        results.sort_by(|a, b| a.path.to_lowercase().cmp(&b.path.to_lowercase()));
+        for stats in results.iter() {
+            render_template(stats, template);
+        }
     }
-}
-
-fn render_output(stats: &FileStats, opts: &Options) {
-    let mut template = TinyTemplate::new();
-    template.add_template("template", &opts.template).unwrap();
-
-    let rendered = template.render("template", &stats).unwrap();
-    println!("{}", rendered);
 }
 
 fn check_path(
@@ -113,4 +107,12 @@ fn check_path(
         });
     }
     return size;
+}
+
+fn render_template(stats: &FileStats, template: &str) {
+    let mut tiny_template = TinyTemplate::new();
+    tiny_template.add_template("template", template).unwrap();
+
+    let rendered = tiny_template.render("template", &stats).unwrap();
+    println!("{}", rendered);
 }

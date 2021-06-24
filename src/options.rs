@@ -1,12 +1,16 @@
 use std::str::FromStr;
 
-pub struct Options {
+#[derive(Debug)]
+pub struct Options<'a> {
     pub verbose: bool,
     pub output: OutputOption,
     pub multithread: bool,
-    pub template: String,
+
+    pub template: Option<&'a str>,
+    pub template_start: Option<&'a str>,
 }
 
+#[derive(Debug)]
 pub enum OutputOption {
     Root,
     All

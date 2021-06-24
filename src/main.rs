@@ -9,11 +9,11 @@ fn main() {
     let matches = app_from_crate!()
         .arg(
             Arg::new("template")
-                .about("Template for output")
+                .about("Template for output generated after all processing is finished")
                 .short('t')
                 .long("template")
+                .default_value("Size of {path} is {size_mb}mb")
                 .required(false)
-                .default_value("Size of {path} is {size_mb}mb"),
         )
         
         .arg(
@@ -23,7 +23,7 @@ fn main() {
                 .long("output")
                 .required(false)
                 .possible_values(&["root", "all"])
-                .default_value("root"),
+                .default_value("root")
         )
         
         .arg(
@@ -33,13 +33,15 @@ fn main() {
                 .long("file-system")
                 .required(false)
                 .possible_values(&["std"])
-                .default_value("std"),
+                .default_value("std")
         )
 
         .arg("-v, --verbose 'Whether to print verbose logs'")
         .arg("-s, --single-thread 'Whether to avoid multi-threading'")
         .arg("<path> 'The file/folder path to check'")
         .get_matches();
+
+    println!("{:?}", matches);
 
     let path = matches.value_of("path").unwrap();
     let output = matches.value_of_t("output").unwrap_or_else(|e| e.exit());
@@ -48,10 +50,17 @@ fn main() {
         multithread: (matches.occurrences_of("single-thread") == 0),
         verbose: (matches.occurrences_of("verbose") > 0),
         output: output,
-        template: String::from(matches.value_of("template").unwrap()),
+        template: matches.value_of("template"),
+        template_start: matches.value_of("template_start"),
     };
+
+    let fsys = matches.value_of("file-system").unwrap();
+
+    if opts.verbose {
+        println!("Running at '{}' (fs={}) with {:?}", path, fsys, opts);
+    }
     
-    let fs: Arc<dyn FileSystem> = Arc::new(match &matches.value_of("file-system").unwrap().to_lowercase()[..] {
+    let fs: Arc<dyn FileSystem> = Arc::new(match &fsys.to_lowercase()[..] {
         "std" => fstat::systems::fs::Fs {},
         _ => panic!("no fs match"), // Clap prevents this from ever happening
     });
