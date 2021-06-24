@@ -3,7 +3,6 @@ use std::path::Path;
 use crate::options::Options;
 use crate::systems::FileSystem;
 
-#[derive(Clone, Copy)]
 pub struct Fs {}
 
 impl FileSystem for Fs {
