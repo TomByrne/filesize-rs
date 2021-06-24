@@ -3,7 +3,7 @@ use std::sync::Mutex;
 use std::time::Instant;
 use tinytemplate::TinyTemplate;
 use systems::FileSystem;
-use options::Options;
+use options::{ Options, OutputOption };
 use std::sync::Arc;
 
 pub mod options;
@@ -24,7 +24,8 @@ pub struct FileStats {
 }
 
 pub fn run(path: &str, opts: Options, system: &Arc<dyn FileSystem>) {
-    if opts.recurse {
+    let recurse = if let OutputOption::All = opts.output { true } else { false }; 
+    if recurse {
         println!("Reading size of path recursively {}", path);
     } else {
         println!("Reading size of path {}", path);
@@ -67,13 +68,14 @@ fn check_path(
                 return 0;
             }
             Some(files) => {
-                if opts.verbose && !opts.recurse {
+                let recurse = if let OutputOption::All = opts.output { true } else { false }; 
+                if opts.verbose && !recurse {
                     println!("   Reading in parent {}", path);
                 }
                 let total: Mutex<u64> = Mutex::new(0);
 
                 let file_process = |entry: &String| {
-                    let size = check_path(entry, opts, &system.clone(), opts.recurse, results);
+                    let size = check_path(entry, opts, &system.clone(), recurse, results);
                     let mut mut_total = total.lock().unwrap();
                     *mut_total += size;
                 };
