@@ -1,13 +1,10 @@
 use std::str::FromStr;
 
-// mod systems;
-
 pub struct Options {
     pub verbose: bool,
     pub output: OutputOption,
     pub multithread: bool,
     pub template: String,
-    // pub system: Arc<systems::FileSystem>,
 }
 
 pub enum OutputOption {

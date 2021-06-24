@@ -15,6 +15,7 @@ fn main() {
                 .required(false)
                 .default_value("Size of {path} is {size_mb}mb"),
         )
+        
         .arg(
             Arg::new("output")
                 .about("Which entries to run output (may need to recurse regardless).\nroot = Just the entity specified by the path arg.\nall = All descendants of the entity specified by the path arg.")
@@ -23,6 +24,16 @@ fn main() {
                 .required(false)
                 .possible_values(&["root", "all"])
                 .default_value("root"),
+        )
+        
+        .arg(
+            Arg::new("file-system")
+                .about("Which file system integration to use.\nstd = Standard file system IO")
+                .short('f')
+                .long("file-system")
+                .required(false)
+                .possible_values(&["std"])
+                .default_value("std"),
         )
 
         .arg("-v, --verbose 'Whether to print verbose logs'")
@@ -39,7 +50,11 @@ fn main() {
         output: output,
         template: String::from(matches.value_of("template").unwrap()),
     };
+    
+    let fs: Arc<dyn FileSystem> = Arc::new(match &matches.value_of("file-system").unwrap().to_lowercase()[..] {
+        "std" => fstat::systems::fs::Fs {},
+        _ => panic!("no fs match"), // Clap prevents this from ever happening
+    });
 
-    let fs: Arc<dyn FileSystem>  = Arc::new(fstat::systems::fs::Fs {});
     run(path, opts, &fs);
 }
