@@ -86,15 +86,14 @@ fn check_path(
             }
         }
     } else {
-        size = system.get_size(path, opts);
-        // match system.get_size(path, opts) {
-        //     None => {
-        //         return 0;
-        //     }
-        //     Some(s) => {
-        //         size = s;
-        //     }
-        // }
+        match system.get_size(path, opts) {
+            None => {
+                return 0;
+            }
+            Some(s) => {
+                size = s;
+            }
+        }
     }
 
     if add {

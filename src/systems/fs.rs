@@ -48,7 +48,7 @@ impl FileSystem for Fs {
     }
     
     // TODO: Fix this up
-    fn get_size(&self, path: &str, opts: &Options) -> u64
+    fn get_size(&self, path: &str, opts: &Options) -> Option<u64>
     {
         match metadata(path) {
             Err(err) => {
@@ -59,9 +59,9 @@ impl FileSystem for Fs {
                         err
                     )
                 };
-                return 0;
+                return None;
             }
-            Ok(meta) => return meta.len()
+            Ok(meta) => return Some(meta.len())
         }
     }
     
