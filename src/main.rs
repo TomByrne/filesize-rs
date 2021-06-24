@@ -1,5 +1,9 @@
 use clap::{app_from_crate, Arg};
-use fstat::{run, RunOptions};
+use fstat::{run};
+use fstat::options::Options;
+use fstat::systems::FileSystem;
+use std::sync::Arc;
+
 
 fn main() {
     let matches = app_from_crate!()
@@ -19,12 +23,13 @@ fn main() {
 
     let path = matches.value_of("path").unwrap();
 
-    let opts = RunOptions {
+    let opts = Options {
         multithread: (matches.occurrences_of("single-thread") == 0),
         verbose: (matches.occurrences_of("verbose") > 0),
         recurse: matches.occurrences_of("recurse") > 0,
         template: String::from(matches.value_of("template").unwrap()),
     };
 
-    run(path, opts);
+    let fs: Arc<dyn FileSystem>  = Arc::new(fstat::systems::fs::Fs {});
+    run(path, opts, &fs);
 }

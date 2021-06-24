@@ -1,19 +1,17 @@
 use rayon::prelude::*;
-use std::fs::{metadata, read_dir, read_link, DirEntry};
-use std::path::Path;
 use std::sync::Mutex;
 use std::time::Instant;
 use tinytemplate::TinyTemplate;
+use systems::FileSystem;
+use options::Options;
+use std::sync::Arc;
+
+pub mod options;
+pub mod systems;
 
 #[macro_use]
 extern crate serde_derive;
 
-pub struct RunOptions {
-    pub verbose: bool,
-    pub recurse: bool,
-    pub multithread: bool,
-    pub template: String,
-}
 
 #[derive(Serialize)]
 pub struct FileStats {
@@ -25,22 +23,22 @@ pub struct FileStats {
     size_b: u64,
 }
 
-pub fn run(path: &str, opts: RunOptions) {
+pub fn run(path: &str, opts: Options, system: &Arc<dyn FileSystem>) {
     if opts.recurse {
         println!("Reading size of path recursively {}", path);
     } else {
         println!("Reading size of path {}", path);
     }
     let results_mutex = Mutex::new(Vec::new());
-    check_path(path, &opts, true, &results_mutex);
+    check_path(path, &opts, system, true, &results_mutex);
 
     let results: &Vec<FileStats> = &results_mutex.lock().unwrap();
     for stats in results {
-        size_read(stats, &opts);
+        render_output(stats, &opts);
     }
 }
 
-fn size_read(stats: &FileStats, opts: &RunOptions) {
+fn render_output(stats: &FileStats, opts: &Options) {
     let mut template = TinyTemplate::new();
     template.add_template("template", &opts.template).unwrap();
 
@@ -48,80 +46,63 @@ fn size_read(stats: &FileStats, opts: &RunOptions) {
     println!("{}", rendered);
 }
 
-fn check_path<P: AsRef<Path> + Copy>(
-    path: P,
-    opts: &RunOptions,
+fn check_path(
+    path: &str,
+    opts: &Options,
+    system: &Arc<dyn FileSystem>,
     add: bool,
     results: &Mutex<Vec<FileStats>>,
 ) -> u64 {
-    // Check if this is a symlink, and abort if so (would need to solve symlink-loops)
-    if let Ok(_) = read_link(path) {
-        if opts.verbose {
-            println!("   Skipping symlink {}", path.as_ref().display());
-        }
+
+    if !system.is_valid(path, opts) {
         return 0;
     }
 
     let start = Instant::now();
     let size: u64;
-    if path.as_ref().is_dir() {
-        let dir_read = read_dir(path);
-        match dir_read {
-            Err(e) => {
-                if opts.verbose {
-                    println!("Error reading dir ({}) {}", path.as_ref().display(), e)
-                };
+    if system.is_parent(path, opts) {
+        match system.get_children(path, opts) {
+            None => {
                 return 0;
             }
-            Ok(files) => {
+            Some(files) => {
                 if opts.verbose && !opts.recurse {
-                    println!("   Reading in dir {}", path.as_ref().display());
+                    println!("   Reading in parent {}", path);
                 }
                 let total: Mutex<u64> = Mutex::new(0);
-                let mut file_vec = Vec::new();
-                for entry in files {
-                    file_vec.push(entry.unwrap());
-                }
 
-                let file_process = |entry: &DirEntry| {
-                    let size = check_path(entry.path().as_path(), opts, opts.recurse, results);
+                let file_process = |entry: &String| {
+                    let size = check_path(entry, opts, &system.clone(), opts.recurse, results);
                     let mut mut_total = total.lock().unwrap();
                     *mut_total += size;
                 };
 
                 if opts.multithread {
-                    file_vec.par_iter().for_each(file_process);
+                    files.par_iter().for_each(file_process);
                 } else {
-                    file_vec.iter().for_each(file_process);
+                    files.iter().for_each(file_process);
                 };
                 size = *total.lock().unwrap();
             }
         }
     } else {
-        match metadata(path) {
-            Err(err) => {
-                if opts.verbose {
-                    println!(
-                        "Failed to read file metadata ({}) {}",
-                        path.as_ref().display(),
-                        err
-                    )
-                };
-                return 0;
-            }
-            Ok(meta) => {
-                size = meta.len();
-            }
-        }
+        size = system.get_size(path, opts);
+        // match system.get_size(path, opts) {
+        //     None => {
+        //         return 0;
+        //     }
+        //     Some(s) => {
+        //         size = s;
+        //     }
+        // }
     }
 
     if add {
-        let as_path = path.as_ref();
         let mut res_unlocked = results.lock().unwrap();
         let duration = start.elapsed();
         res_unlocked.push(FileStats {
-            name: String::from(as_path.file_name().unwrap().to_str().unwrap()),
-            path: String::from(as_path.to_str().unwrap()),
+            name: system.get_name(path, opts),
+            path: String::from(path),
 
             time_s: duration.as_secs(),
 
