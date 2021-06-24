@@ -32,8 +32,9 @@ pub fn run(path: &str, opts: Options, system: &Arc<dyn FileSystem>) {
     let results_mutex = Mutex::new(Vec::new());
     check_path(path, &opts, system, true, &results_mutex);
 
-    let results: &Vec<FileStats> = &results_mutex.lock().unwrap();
-    for stats in results {
+    let mut results = results_mutex.lock().unwrap();
+    results.sort_by(|a, b| a.path.to_lowercase().cmp(&b.path.to_lowercase()));
+    for stats in results.iter() {
         render_output(stats, &opts);
     }
 }
