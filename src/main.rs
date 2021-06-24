@@ -15,7 +15,7 @@ fn main() {
                 .required(false)
                 .default_value("Size of {path} is {size_mb}mb"),
         )
-        .arg("-r, --recurse 'The file/folder path to check'")
+        .arg("-r, --recurse 'Whether to print templates recursively for all descendants'")
         .arg("-v, --verbose 'Whether to print verbose logs'")
         .arg("-s, --single-thread 'Whether to skip multi-threading (performance check)'")
         .arg("<path> 'The file/folder path to check'")
