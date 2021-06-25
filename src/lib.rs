@@ -14,6 +14,7 @@ extern crate serde_derive;
 
 
 #[derive(Serialize)]
+#[derive(Clone)]
 pub struct FileStats {
     path: String,
     name: String,
@@ -135,6 +136,14 @@ fn check_path(
                     let size = check_path(entry, opts, &system.clone(), recurse, child_context, results);
                     let mut mut_total = total.lock().unwrap();
                     *mut_total += size;
+                    
+                    if output {
+                        if let Some(template) = &opts.template_prog {
+                            let mut stats_copy = stats.clone();
+                            update_stats(&mut stats_copy, &start, mut_total.clone());
+                            render_template(&stats_copy, template);
+                        }
+                    }
                 };
 
                 if opts.multithread {
@@ -159,15 +168,18 @@ fn check_path(
 
 
     if output {
-        let duration = start.elapsed();
-        stats.time_s = duration.as_secs();
-        stats.size_mb = size / 1000000;
-        stats.size_b = size;
-        
+        update_stats(&mut stats, &start, size);
         let mut res_unlocked = results.lock().unwrap();
         res_unlocked.push(stats);
     }
     return size;
+}
+
+fn update_stats(stats: &mut FileStats, start: &Instant, size: u64) {
+    let duration = start.elapsed();
+    stats.time_s = duration.as_secs();
+    stats.size_mb = size / 1000000;
+    stats.size_b = size;
 }
 
 fn render_template(stats: &FileStats, template: &str) {
