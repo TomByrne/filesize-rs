@@ -17,12 +17,15 @@ extern crate serde_derive;
 pub struct FileStats {
     path: String,
     name: String,
+    is_dir: bool,
+    has_children: bool,
     
     depth: u32,
     index: u32,
     total: u32,
     first: bool,
     last: bool,
+    parents_last: Vec<bool>,
 
     time_s: u64,
 
@@ -30,7 +33,8 @@ pub struct FileStats {
     size_b: u64,
 }
 
-pub struct FileContext {
+pub struct FileContext<'a> {
+    parents_last: &'a Vec<bool>,
     depth: u32,
     index: u32,
     total: u32,
@@ -45,9 +49,10 @@ pub fn run(path: &str, opts: Options, system: &Arc<dyn FileSystem>) {
     }
     let results_mutex = Mutex::new(Vec::new());
     let context = FileContext {
+        parents_last: &Vec::new(),
         depth: 0,
         index: 0,
-        total: 1
+        total: 1,
     };
     check_path(path, &opts, system, true, context, &results_mutex);
 
@@ -73,15 +78,20 @@ fn check_path(
         return 0;
     }
 
+    let is_dir = system.is_parent(path, opts);
+
     let mut stats = FileStats {
         name: system.get_name(path, opts),
         path: String::from(path),
+        is_dir: is_dir,
+        has_children: false,
 
         depth: context.depth,
         index: context.index,
         total: context.total,
         first: context.index == 0,
         last: context.index == context.total-1,
+        parents_last: context.parents_last.to_vec(),
 
         time_s: 0,
 
@@ -97,20 +107,25 @@ fn check_path(
 
     let start = Instant::now();
     let size: u64;
-    if system.is_parent(path, opts) {
+    if is_dir {
         match system.get_children(path, opts) {
             None => {
                 return 0;
             }
             Some(files) => {
+                stats.has_children = files.len() > 0;
+
                 let recurse = if let OutputOption::All = opts.output { true } else { false }; 
                 if opts.verbose && !recurse {
                     println!("   Reading in parent {}", path);
                 }
                 let total: Mutex<u64> = Mutex::new(0);
+                let mut child_parents_last = context.parents_last.to_vec();
+                child_parents_last.push(context.index == context.total-1);
 
                 let file_process = |(i, entry): (usize, &String)| {
                     let child_context = FileContext {
+                        parents_last: &child_parents_last,
                         depth: context.depth + 1,
                         index: i as u32,
                         total: files.len() as u32
