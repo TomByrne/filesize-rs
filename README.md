@@ -70,9 +70,11 @@ OPTIONS:
 ```
 
 ## Examples
-List file tree with hierarchy depicted
+List file tree with hierarchy depicted:
 ```sh
-fstat "C:\Program Files\7-Zip" --output=all --template="{{for p in parents_last}}{{if p}} {{else}}│{{endif}} {{endfor}}{{if last}}└{{else}}├{{endif}}{{if has_children}}{{endif}} {path}"
+fstat "C:\Program Files\7-Zip" \
+    --output=all \
+    --template="{{for p in parents_last}}{{if p}} {{else}}│{{endif}} {{endfor}}{{if last}}└{{else}}├{{endif}}{{if has_children}}{{endif}} {path}"
 
 # Output (some language files removed for brevity):
 └ C:\Program Files\7-Zip
@@ -94,4 +96,31 @@ fstat "C:\Program Files\7-Zip" --output=all --template="{{for p in parents_last}
   ├ C:\Program Files\7-Zip\License.txt
   ├ C:\Program Files\7-Zip\readme.txt
   └ C:\Program Files\7-Zip\Uninstall.exe
+```
+
+Get size of folder with progress output:
+```sh
+fstat "C:\Program Files\7-Zip" \
+    --template-start="Getting size: {path}" \
+    --template-prog="   Progress: {size_b}b" \
+    --template-end="Done: {size_mb}mb ({size_b}b)"
+
+# Output:
+Getting size: C:\Program Files\7-Zip
+   Progress: 366b
+   Progress: 581998b
+   Progress: 690072b
+   Progress: 691760b
+   Progress: 707120b
+   Progress: 1574960b
+   Progress: 1653296b
+   Progress: 1657286b
+   Progress: 1863110b
+   Progress: 3542470b
+   Progress: 4011462b
+   Progress: 4060306b
+   Progress: 4110994b
+   Progress: 4297874b
+   Progress: 5204927b
+Done: 5mb (5204927b)
 ```

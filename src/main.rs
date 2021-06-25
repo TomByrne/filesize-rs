@@ -30,6 +30,13 @@ fn main() {
         )
         
         .arg(
+            Arg::new("template-end")
+                .about("Template for output generated after a file/folder is finished being processed (but before all items are completed)")
+                .long("template-end")
+                .takes_value(true)
+        )
+        
+        .arg(
             Arg::new("output")
                 .about("Which entries to run output (may need to recurse regardless).\nroot = Just the entity specified by the path arg.\nall = All descendants of the entity specified by the path arg.")
                 .short('o')
@@ -66,6 +73,7 @@ fn main() {
         template: matches.value_of("template"),
         template_start: matches.value_of("template-start"),
         template_prog: matches.value_of("template-prog"),
+        template_end: matches.value_of("template-end"),
     };
 
     let fsys = matches.value_of("file-system").unwrap();

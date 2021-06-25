@@ -169,8 +169,15 @@ fn check_path(
 
     if output {
         update_stats(&mut stats, &start, size);
-        let mut res_unlocked = results.lock().unwrap();
-        res_unlocked.push(stats);
+        
+        if let Some(template) = &opts.template_end {
+            render_template(&stats, template);
+        }
+
+        if let Some(_template) = &opts.template {
+            let mut res_unlocked = results.lock().unwrap();
+            res_unlocked.push(stats);
+        }
     }
     return size;
 }

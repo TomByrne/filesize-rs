@@ -9,6 +9,7 @@ pub struct Options<'a> {
     pub template: Option<&'a str>,
     pub template_start: Option<&'a str>,
     pub template_prog: Option<&'a str>,
+    pub template_end: Option<&'a str>,
 }
 
 #[derive(Debug)]
