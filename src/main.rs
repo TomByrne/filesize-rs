@@ -12,8 +12,14 @@ fn main() {
                 .about("Template for output generated after all processing is finished")
                 .short('t')
                 .long("template")
-                .default_value("Size of {path} is {size_mb}mb")
-                .required(false)
+                .takes_value(true)
+        )
+        
+        .arg(
+            Arg::new("template-start")
+                .about("Template for output generated when a file/folder begins being processed")
+                .long("template-start")
+                .takes_value(true)
         )
         
         .arg(
@@ -51,13 +57,13 @@ fn main() {
         verbose: (matches.occurrences_of("verbose") > 0),
         output: output,
         template: matches.value_of("template"),
-        template_start: matches.value_of("template_start"),
+        template_start: matches.value_of("template-start"),
     };
 
     let fsys = matches.value_of("file-system").unwrap();
 
     if opts.verbose {
-        println!("Running at '{}' (fs={}) with {:?}", path, fsys, opts);
+        println!("Running at '{}' (fs={}) with {:#?}", path, fsys, opts);
     }
     
     let fs: Arc<dyn FileSystem> = Arc::new(match &fsys.to_lowercase()[..] {

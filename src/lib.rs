@@ -17,10 +17,23 @@ extern crate serde_derive;
 pub struct FileStats {
     path: String,
     name: String,
+    
+    depth: u32,
+    index: u32,
+    total: u32,
+    first: bool,
+    last: bool,
+
     time_s: u64,
 
     size_mb: u64,
     size_b: u64,
+}
+
+pub struct FileContext {
+    depth: u32,
+    index: u32,
+    total: u32,
 }
 
 pub fn run(path: &str, opts: Options, system: &Arc<dyn FileSystem>) {
@@ -31,7 +44,12 @@ pub fn run(path: &str, opts: Options, system: &Arc<dyn FileSystem>) {
         println!("Reading size of path {}", path);
     }
     let results_mutex = Mutex::new(Vec::new());
-    check_path(path, &opts, system, true, &results_mutex);
+    let context = FileContext {
+        depth: 0,
+        index: 0,
+        total: 1
+    };
+    check_path(path, &opts, system, true, context, &results_mutex);
 
     if let Some(template) = &opts.template {
         let mut results = results_mutex.lock().unwrap();
@@ -46,12 +64,35 @@ fn check_path(
     path: &str,
     opts: &Options,
     system: &Arc<dyn FileSystem>,
-    add: bool,
+    output: bool,
+    context: FileContext,
     results: &Mutex<Vec<FileStats>>,
 ) -> u64 {
 
     if !system.is_valid(path, opts) {
         return 0;
+    }
+
+    let mut stats = FileStats {
+        name: system.get_name(path, opts),
+        path: String::from(path),
+
+        depth: context.depth,
+        index: context.index,
+        total: context.total,
+        first: context.index == 0,
+        last: context.index == context.total-1,
+
+        time_s: 0,
+
+        size_mb: 0,
+        size_b: 0,
+    };
+
+    if output {
+        if let Some(template) = &opts.template_start {
+            render_template(&stats, template);
+        }
     }
 
     let start = Instant::now();
@@ -68,16 +109,21 @@ fn check_path(
                 }
                 let total: Mutex<u64> = Mutex::new(0);
 
-                let file_process = |entry: &String| {
-                    let size = check_path(entry, opts, &system.clone(), recurse, results);
+                let file_process = |(i, entry): (usize, &String)| {
+                    let child_context = FileContext {
+                        depth: context.depth + 1,
+                        index: i as u32,
+                        total: files.len() as u32
+                    };
+                    let size = check_path(entry, opts, &system.clone(), recurse, child_context, results);
                     let mut mut_total = total.lock().unwrap();
                     *mut_total += size;
                 };
 
                 if opts.multithread {
-                    files.par_iter().for_each(file_process);
+                    files.par_iter().enumerate().for_each(file_process);
                 } else {
-                    files.iter().for_each(file_process);
+                    files.iter().enumerate().for_each(file_process);
                 };
                 size = *total.lock().unwrap();
             }
@@ -93,18 +139,16 @@ fn check_path(
         }
     }
 
-    if add {
-        let mut res_unlocked = results.lock().unwrap();
+
+
+    if output {
         let duration = start.elapsed();
-        res_unlocked.push(FileStats {
-            name: system.get_name(path, opts),
-            path: String::from(path),
-
-            time_s: duration.as_secs(),
-
-            size_mb: size / 1000000,
-            size_b: size,
-        });
+        stats.time_s = duration.as_secs();
+        stats.size_mb = size / 1000000;
+        stats.size_b = size;
+        
+        let mut res_unlocked = results.lock().unwrap();
+        res_unlocked.push(stats);
     }
     return size;
 }
