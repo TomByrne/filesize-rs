@@ -42,10 +42,12 @@ pub struct FileContext<'a> {
 
 pub fn run(path: &str, opts: Options, system: &Arc<dyn FileSystem>) {
     let recurse = if let OutputOption::All = opts.output { true } else { false }; 
-    if recurse {
-        println!("Reading size of path recursively {}", path);
-    } else {
-        println!("Reading size of path {}", path);
+    if opts.verbose {
+        if recurse {
+            println!("Reading size of path recursively {}", path);
+        } else {
+            println!("Reading size of path {}", path);
+        }
     }
     let results_mutex = Mutex::new(Vec::new());
     let context = FileContext {

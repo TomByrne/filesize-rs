@@ -68,3 +68,30 @@ FLAGS:
 OPTIONS:
     -t, --template <template>    Template for output [default: Size of {path} is {size_mb}mb]
 ```
+
+## Examples
+List file tree with hierarchy depicted
+```sh
+fstat "C:\Program Files\7-Zip" --output=all --template="{{for p in parents_last}}{{if p}} {{else}}│{{endif}} {{endfor}}{{if last}}└{{else}}├{{endif}}{{if has_children}}{{endif}} {path}"
+
+# Output (some language files removed for brevity):
+└ C:\Program Files\7-Zip
+  ├ C:\Program Files\7-Zip\7-zip.chm
+  ├ C:\Program Files\7-Zip\7-zip.dll
+  ├ C:\Program Files\7-Zip\7-zip32.dll
+  ├ C:\Program Files\7-Zip\7z.dll
+  ├ C:\Program Files\7-Zip\7z.exe
+  ├ C:\Program Files\7-Zip\7z.sfx
+  ├ C:\Program Files\7-Zip\7zCon.sfx
+  ├ C:\Program Files\7-Zip\7zFM.exe
+  ├ C:\Program Files\7-Zip\7zG.exe
+  ├ C:\Program Files\7-Zip\descript.ion
+  ├ C:\Program Files\7-Zip\History.txt
+  ├ C:\Program Files\7-Zip\Lang
+  │ ├ C:\Program Files\7-Zip\Lang\af.txt
+  │ ├ C:\Program Files\7-Zip\Lang\an.txt
+  │ └ C:\Program Files\7-Zip\Lang\ar.txt
+  ├ C:\Program Files\7-Zip\License.txt
+  ├ C:\Program Files\7-Zip\readme.txt
+  └ C:\Program Files\7-Zip\Uninstall.exe
+```

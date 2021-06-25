@@ -47,7 +47,7 @@ fn main() {
         .arg("<path> 'The file/folder path to check'")
         .get_matches();
 
-    println!("{:?}", matches);
+    // println!("{:?}", matches);
 
     let path = matches.value_of("path").unwrap();
     let output = matches.value_of_t("output").unwrap_or_else(|e| e.exit());
