@@ -66,14 +66,21 @@ fn main() {
     let path = matches.value_of("path").unwrap();
     let output = matches.value_of_t("output").unwrap_or_else(|e| e.exit());
 
+    fn print(s:String) -> () {
+        println!("{}", s);
+    }
+
     let opts = Options {
         multithread: (matches.occurrences_of("single-thread") == 0),
         verbose: (matches.occurrences_of("verbose") > 0),
         output: output,
+
         template: matches.value_of("template"),
         template_start: matches.value_of("template-start"),
         template_prog: matches.value_of("template-prog"),
         template_end: matches.value_of("template-end"),
+
+        print: Some(print)
     };
 
     let fsys = matches.value_of("file-system").unwrap();

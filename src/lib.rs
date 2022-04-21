@@ -16,22 +16,22 @@ extern crate serde_derive;
 #[derive(Serialize)]
 #[derive(Clone)]
 pub struct FileStats {
-    path: String,
-    name: String,
-    is_dir: bool,
-    has_children: bool,
+    pub path: String,
+    pub name: String,
+    pub is_dir: bool,
+    pub has_children: bool,
     
-    depth: u32,
-    index: u32,
-    total: u32,
-    first: bool,
-    last: bool,
-    parents_last: Vec<bool>,
+    pub depth: u32,
+    pub index: u32,
+    pub total: u32,
+    pub first: bool,
+    pub last: bool,
+    pub parents_last: Vec<bool>,
 
-    time_s: u64,
+    pub time_s: u64,
 
-    size_mb: u64,
-    size_b: u64,
+    pub size_mb: u64,
+    pub size_b: u64,
 }
 
 pub struct FileContext<'a> {
@@ -41,7 +41,7 @@ pub struct FileContext<'a> {
     total: u32,
 }
 
-pub fn run(path: &str, opts: Options, system: &Arc<dyn FileSystem>) {
+pub fn run(path: &str, opts: Options, system: &Arc<dyn FileSystem>) -> Vec<FileStats> {
     let recurse = if let OutputOption::All = opts.output { true } else { false }; 
     if opts.verbose {
         if recurse {
@@ -58,14 +58,19 @@ pub fn run(path: &str, opts: Options, system: &Arc<dyn FileSystem>) {
         total: 1,
     };
     check_path(path, &opts, system, true, context, &results_mutex);
+    
+    let mut results = results_mutex.lock().unwrap();
+    results.sort_by(|a, b| a.path.to_lowercase().cmp(&b.path.to_lowercase()));
 
-    if let Some(template) = &opts.template {
-        let mut results = results_mutex.lock().unwrap();
-        results.sort_by(|a, b| a.path.to_lowercase().cmp(&b.path.to_lowercase()));
-        for stats in results.iter() {
-            render_template(stats, template);
+    if let Some(print) = &opts.print {
+        if let Some(template) = &opts.template {
+            for stats in results.iter() {
+                render_template(stats, template, print);
+            }
         }
     }
+
+    return results.to_vec();
 }
 
 fn check_path(
@@ -103,9 +108,14 @@ fn check_path(
     };
 
     if output {
-        if let Some(template) = &opts.template_start {
-            render_template(&stats, template);
+        if let Some(print) = &opts.print {
+            if let Some(template) = &opts.template_start {
+                render_template(&stats, template, print);
+            }
         }
+    }
+    if opts.verbose {
+        println!("check_path {} {}", path, is_dir);
     }
 
     let start = Instant::now();
@@ -138,10 +148,12 @@ fn check_path(
                     *mut_total += size;
                     
                     if output {
-                        if let Some(template) = &opts.template_prog {
-                            let mut stats_copy = stats.clone();
-                            update_stats(&mut stats_copy, &start, mut_total.clone());
-                            render_template(&stats_copy, template);
+                        if let Some(print) = &opts.print {
+                            if let Some(template) = &opts.template_prog {
+                                let mut stats_copy = stats.clone();
+                                update_stats(&mut stats_copy, &start, mut_total.clone());
+                                render_template(&stats_copy, template, print);
+                            }
                         }
                     }
                 };
@@ -170,14 +182,14 @@ fn check_path(
     if output {
         update_stats(&mut stats, &start, size);
         
-        if let Some(template) = &opts.template_end {
-            render_template(&stats, template);
+        if let Some(print) = &opts.print {
+            if let Some(template) = &opts.template_end {
+                render_template(&stats, template, print);
+            }
         }
 
-        if let Some(_template) = &opts.template {
-            let mut res_unlocked = results.lock().unwrap();
-            res_unlocked.push(stats);
-        }
+        let mut res_unlocked = results.lock().unwrap();
+        res_unlocked.push(stats);
     }
     return size;
 }
@@ -189,10 +201,10 @@ fn update_stats(stats: &mut FileStats, start: &Instant, size: u64) {
     stats.size_b = size;
 }
 
-fn render_template(stats: &FileStats, template: &str) {
+fn render_template(stats: &FileStats, template: &str, print:&fn(String) -> ()) {
     let mut tiny_template = TinyTemplate::new();
     tiny_template.add_template("template", template).unwrap();
 
     let rendered = tiny_template.render("template", &stats).unwrap();
-    println!("{}", rendered);
+    print(format!("{}", rendered));
 }
