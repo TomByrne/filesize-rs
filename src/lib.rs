@@ -1,9 +1,8 @@
 use rayon::prelude::*;
 use std::sync::Mutex;
 use std::time::Instant;
-use tinytemplate::TinyTemplate;
 use systems::FileSystem;
-use options::{ Options, OutputOption };
+use options::{ Options, OutputOption, FileStats };
 use std::sync::Arc;
 
 pub mod options;
@@ -11,28 +10,6 @@ pub mod systems;
 
 #[macro_use]
 extern crate serde_derive;
-
-
-#[derive(Serialize)]
-#[derive(Clone)]
-pub struct FileStats {
-    pub path: String,
-    pub name: String,
-    pub is_dir: bool,
-    pub has_children: bool,
-    
-    pub depth: u32,
-    pub index: u32,
-    pub total: u32,
-    pub first: bool,
-    pub last: bool,
-    pub parents_last: Vec<bool>,
-
-    pub time_s: u64,
-
-    pub size_mb: u64,
-    pub size_b: u64,
-}
 
 pub struct FileContext<'a> {
     parents_last: &'a Vec<bool>,
@@ -62,11 +39,9 @@ pub fn run(path: &str, opts: Options, system: &Arc<dyn FileSystem>) -> Vec<FileS
     let mut results = results_mutex.lock().unwrap();
     results.sort_by(|a, b| a.path.to_lowercase().cmp(&b.path.to_lowercase()));
 
-    if let Some(print) = &opts.print {
-        if let Some(template) = &opts.template {
-            for stats in results.iter() {
-                render_template(stats, template, print);
-            }
+    if let Some(handle) = &opts.handle {
+        for stats in results.iter() {
+            handle(stats.clone(), &opts.context);
         }
     }
 
@@ -108,10 +83,8 @@ fn check_path(
     };
 
     if output {
-        if let Some(print) = &opts.print {
-            if let Some(template) = &opts.template_start {
-                render_template(&stats, template, print);
-            }
+        if let Some(handle) = &opts.handle_start {
+            handle(stats.clone(), &opts.context_start);
         }
     }
     if opts.verbose {
@@ -148,12 +121,10 @@ fn check_path(
                     *mut_total += size;
                     
                     if output {
-                        if let Some(print) = &opts.print {
-                            if let Some(template) = &opts.template_prog {
-                                let mut stats_copy = stats.clone();
-                                update_stats(&mut stats_copy, &start, mut_total.clone());
-                                render_template(&stats_copy, template, print);
-                            }
+                        if let Some(handle) = &opts.handle_prog {
+                            let mut stats_copy = stats.clone();
+                            update_stats(&mut stats_copy, &start, mut_total.clone());
+                            handle(stats_copy, &opts.context_prog);
                         }
                     }
                 };
@@ -182,10 +153,8 @@ fn check_path(
     if output {
         update_stats(&mut stats, &start, size);
         
-        if let Some(print) = &opts.print {
-            if let Some(template) = &opts.template_end {
-                render_template(&stats, template, print);
-            }
+        if let Some(handle) = &opts.handle_end {
+            handle(stats.clone(), &opts.context_end);
         }
 
         let mut res_unlocked = results.lock().unwrap();
@@ -199,12 +168,4 @@ fn update_stats(stats: &mut FileStats, start: &Instant, size: u64) {
     stats.time_s = duration.as_secs();
     stats.size_mb = size / 1000000;
     stats.size_b = size;
-}
-
-fn render_template(stats: &FileStats, template: &str, print:&fn(String) -> ()) {
-    let mut tiny_template = TinyTemplate::new();
-    tiny_template.add_template("template", template).unwrap();
-
-    let rendered = tiny_template.render("template", &stats).unwrap();
-    print(format!("{}", rendered));
 }

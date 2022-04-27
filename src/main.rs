@@ -1,8 +1,9 @@
 use clap::{app_from_crate, Arg};
-use fstat::{run};
-use fstat::options::Options;
+use fstat::run;
+use fstat::options::{ Options, FileStats };
 use fstat::systems::FileSystem;
 use std::sync::Arc;
+use tinytemplate::TinyTemplate;
 
 
 fn main() {
@@ -66,27 +67,50 @@ fn main() {
     let path = matches.value_of("path").unwrap();
     let output = matches.value_of_t("output").unwrap_or_else(|e| e.exit());
 
-    fn print(s:String) -> () {
-        println!("{}", s);
-    }
+    let empty = "";
 
-    let opts = Options {
+    let mut opts = Options {
         multithread: (matches.occurrences_of("single-thread") == 0),
         verbose: (matches.occurrences_of("verbose") > 0),
         output: output,
 
-        template: matches.value_of("template"),
-        template_start: matches.value_of("template-start"),
-        template_prog: matches.value_of("template-prog"),
-        template_end: matches.value_of("template-end"),
+        context: &empty,
+        handle: None,
 
-        print: Some(print)
+        context_start: &empty,
+        handle_start: None,
+
+        context_prog: &empty,
+        handle_prog: None,
+
+        context_end: &empty,
+        handle_end: None
     };
+
+    if let Some(template) = matches.value_of("template") {
+        opts.context = &template;
+        opts.handle = Some(render_template);
+    }
+
+    if let Some(template) = matches.value_of("template-start") {
+        opts.context_start = &template;
+        opts.handle_start = Some(render_template);
+    }
+
+    if let Some(template) = matches.value_of("template-prog") {
+        opts.context_prog = &template;
+        opts.handle_prog = Some(render_template);
+    }
+
+    if let Some(template) = matches.value_of("template-end") {
+        opts.context_end = &template;
+        opts.handle_end = Some(render_template);
+    }
 
     let fsys = matches.value_of("file-system").unwrap();
 
     if opts.verbose {
-        println!("Running at '{}' (fs={}) with {:#?}", path, fsys, opts);
+        println!("Running at '{}' (fs={}) multithread:{} verbose:{}", path, fsys, opts.multithread, opts.verbose);
     }
     
     let fs: Arc<dyn FileSystem> = Arc::new(match &fsys.to_lowercase()[..] {
@@ -95,4 +119,13 @@ fn main() {
     });
 
     run(path, opts, &fs);
+}
+
+
+fn render_template(stats: FileStats, template: &str) {
+    let mut tiny_template = TinyTemplate::new();
+    tiny_template.add_template("template", template).unwrap();
+
+    let rendered = tiny_template.render("template", &stats).unwrap();
+    println!("{}", rendered);
 }
