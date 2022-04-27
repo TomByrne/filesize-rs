@@ -1,25 +1,24 @@
 use std::str::FromStr;
+// use std::marker::PhantomData;
 
 // #[derive(Debug)]
-pub struct Options<'a> {
+pub struct Options {
     pub verbose: bool,
     pub output: OutputOption,
     pub multithread: bool,
-
-    pub context:&'a str,
-    pub handle: HandlerOption,
-
-    pub context_start:&'a str,
-    pub handle_start: HandlerOption,
-
-    pub context_prog:&'a str,
-    pub handle_prog: HandlerOption,
-
-    pub context_end:&'a str,
-    pub handle_end: HandlerOption,
 }
 
-pub type HandlerOption = Option<fn(f:FileStats, c:&str)->()>;
+// #[derive(Debug)]
+pub struct Handlers<'a, T : 'a + Sized + Sync> {
+    pub post: HandlerOption<&'a T>,
+    pub start: HandlerOption<&'a T>,
+    pub prog: HandlerOption<&'a T>,
+    pub end: HandlerOption<&'a T>,
+
+    // phantom: PhantomData<&'a T>,
+}
+
+pub type HandlerOption<T> = Option<fn(f:FileStats, c:T)->()>;
 // pub type HandlerOption = Option<&'static (dyn Fn(FileStats) -> ())>;
 // pub type HandlerOption = &'static dyn Fn(FileStats) -> ();
 

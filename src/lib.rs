@@ -2,7 +2,7 @@ use rayon::prelude::*;
 use std::sync::Mutex;
 use std::time::Instant;
 use systems::FileSystem;
-use options::{ Options, OutputOption, FileStats };
+use options::{ Options, OutputOption, FileStats, Handlers };
 use std::sync::Arc;
 
 pub mod options;
@@ -18,7 +18,7 @@ pub struct FileContext<'a> {
     total: u32,
 }
 
-pub fn run(path: &str, opts: Options, system: &Arc<dyn FileSystem>) -> Vec<FileStats> {
+pub fn run<'a, T: Sync>(path: &str, opts: Options, handlers:Handlers<'a, T>, data:&'a T, system: &Arc<dyn FileSystem>) -> Vec<FileStats> {
     let recurse = if let OutputOption::All = opts.output { true } else { false }; 
     if opts.verbose {
         if recurse {
@@ -34,23 +34,25 @@ pub fn run(path: &str, opts: Options, system: &Arc<dyn FileSystem>) -> Vec<FileS
         index: 0,
         total: 1,
     };
-    check_path(path, &opts, system, true, context, &results_mutex);
+    check_path(path, &opts, &handlers, data, system, true, context, &results_mutex);
     
     let mut results = results_mutex.lock().unwrap();
     results.sort_by(|a, b| a.path.to_lowercase().cmp(&b.path.to_lowercase()));
 
-    if let Some(handle) = &opts.handle {
+    if let Some(handle) = &handlers.post {
         for stats in results.iter() {
-            handle(stats.clone(), &opts.context);
+            handle(stats.clone(), data);
         }
     }
 
     return results.to_vec();
 }
 
-fn check_path(
+fn check_path<'a, T: Sync>(
     path: &str,
     opts: &Options,
+    handlers: &Handlers<'a, T>,
+    data: &'a T,
     system: &Arc<dyn FileSystem>,
     output: bool,
     context: FileContext,
@@ -83,8 +85,8 @@ fn check_path(
     };
 
     if output {
-        if let Some(handle) = &opts.handle_start {
-            handle(stats.clone(), &opts.context_start);
+        if let Some(handle) = &handlers.start {
+            handle(stats.clone(), data);
         }
     }
     if opts.verbose {
@@ -116,15 +118,15 @@ fn check_path(
                         index: i as u32,
                         total: files.len() as u32
                     };
-                    let size = check_path(entry, opts, &system.clone(), recurse, child_context, results);
+                    let size = check_path(entry, opts, handlers, data, &system.clone(), recurse, child_context, results);
                     let mut mut_total = total.lock().unwrap();
                     *mut_total += size;
                     
                     if output {
-                        if let Some(handle) = &opts.handle_prog {
+                        if let Some(handle) = &handlers.prog {
                             let mut stats_copy = stats.clone();
                             update_stats(&mut stats_copy, &start, mut_total.clone());
-                            handle(stats_copy, &opts.context_prog);
+                            handle(stats_copy, data);
                         }
                     }
                 };
@@ -153,8 +155,8 @@ fn check_path(
     if output {
         update_stats(&mut stats, &start, size);
         
-        if let Some(handle) = &opts.handle_end {
-            handle(stats.clone(), &opts.context_end);
+        if let Some(handle) = &handlers.end {
+            handle(stats.clone(), data);
         }
 
         let mut res_unlocked = results.lock().unwrap();

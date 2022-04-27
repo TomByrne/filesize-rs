@@ -1,6 +1,6 @@
 use clap::{app_from_crate, Arg};
 use fstat::run;
-use fstat::options::{ Options, FileStats };
+use fstat::options::{ Options, FileStats, Handlers };
 use fstat::systems::FileSystem;
 use std::sync::Arc;
 use tinytemplate::TinyTemplate;
@@ -62,49 +62,56 @@ fn main() {
         .arg("<path> 'The file/folder path to check'")
         .get_matches();
 
+    do_matches(matches);
+}
+
+fn do_matches(matches: clap::ArgMatches) {
+
     // println!("{:?}", matches);
 
     let path = matches.value_of("path").unwrap();
     let output = matches.value_of_t("output").unwrap_or_else(|e| e.exit());
 
-    let empty = "";
-
-    let mut opts = Options {
+    let opts = Options {
         multithread: (matches.occurrences_of("single-thread") == 0),
         verbose: (matches.occurrences_of("verbose") > 0),
-        output: output,
+        output: output
+    };
 
-        context: &empty,
-        handle: None,
+    let mut handlers: Handlers<TemplateData> = Handlers {
+        post: None,
+        start: None,
+        prog: None,
+        end: None
+    };
 
-        context_start: &empty,
-        handle_start: None,
+    let empty = "";
 
-        context_prog: &empty,
-        handle_prog: None,
-
-        context_end: &empty,
-        handle_end: None
+    let mut data = TemplateData {
+        post: &empty,
+        start: &empty,
+        prog: &empty,
+        end: &empty,
     };
 
     if let Some(template) = matches.value_of("template") {
-        opts.context = &template;
-        opts.handle = Some(render_template);
+        data.post = &template;
+        handlers.post = Some(render_template_post);
     }
 
     if let Some(template) = matches.value_of("template-start") {
-        opts.context_start = &template;
-        opts.handle_start = Some(render_template);
+        data.start = &template;
+        handlers.start = Some(render_template_start);
     }
 
     if let Some(template) = matches.value_of("template-prog") {
-        opts.context_prog = &template;
-        opts.handle_prog = Some(render_template);
+        data.prog = &template;
+        handlers.prog = Some(render_template_prog);
     }
 
     if let Some(template) = matches.value_of("template-end") {
-        opts.context_end = &template;
-        opts.handle_end = Some(render_template);
+        data.end = &template;
+        handlers.end = Some(render_template_end);
     }
 
     let fsys = matches.value_of("file-system").unwrap();
@@ -118,9 +125,29 @@ fn main() {
         _ => panic!("no fs match"), // Clap prevents this from ever happening
     });
 
-    run(path, opts, &fs);
+    run(path, opts, handlers, &data, &fs);
 }
 
+struct TemplateData<'a> {
+    post: &'a str,
+    start: &'a str,
+    prog: &'a str,
+    end: &'a str,
+}
+
+
+fn render_template_post(stats: FileStats, data: &TemplateData) {
+    render_template(stats, data.post);
+}
+fn render_template_start(stats: FileStats, data: &TemplateData) {
+    render_template(stats, data.start);
+}
+fn render_template_prog(stats: FileStats, data: &TemplateData) {
+    render_template(stats, data.prog);
+}
+fn render_template_end(stats: FileStats, data: &TemplateData) {
+    render_template(stats, data.end);
+}
 
 fn render_template(stats: FileStats, template: &str) {
     let mut tiny_template = TinyTemplate::new();
