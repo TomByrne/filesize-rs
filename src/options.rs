@@ -29,6 +29,7 @@ pub struct FileStats {
     pub path: String,
     pub name: String,
     pub is_dir: bool,
+    pub child_count: usize,
     pub has_children: bool,
     
     pub depth: u32,

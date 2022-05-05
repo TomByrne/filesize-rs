@@ -69,6 +69,7 @@ fn check_path<'a, T: Sync>(
         name: system.get_name(path, opts),
         path: String::from(path),
         is_dir: is_dir,
+        child_count: 0,
         has_children: false,
 
         depth: context.depth,
@@ -101,6 +102,7 @@ fn check_path<'a, T: Sync>(
                 return 0;
             }
             Some(files) => {
+                stats.child_count = files.len();
                 stats.has_children = files.len() > 0;
 
                 let recurse = if let OutputOption::All = opts.output { true } else { false }; 
