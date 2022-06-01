@@ -9,29 +9,26 @@ pub struct Options {
 }
 
 // #[derive(Debug)]
-pub struct Handlers<'a, T : 'a + Sized + Sync> {
+pub struct Handlers<'a, T: 'a + Sized + Sync> {
     pub post: HandlerOption<&'a T>,
     pub start: HandlerOption<&'a T>,
     pub prog: HandlerOption<&'a T>,
     pub end: HandlerOption<&'a T>,
-
     // phantom: PhantomData<&'a T>,
 }
 
-pub type HandlerOption<T> = Option<fn(f:FileStats, c:T)->()>;
+pub type HandlerOption<T> = Option<fn(f: FileStats, c: T) -> ()>;
 // pub type HandlerOption = Option<&'static (dyn Fn(FileStats) -> ())>;
 // pub type HandlerOption = &'static dyn Fn(FileStats) -> ();
 
-
-#[derive(Serialize)]
-#[derive(Clone)]
+#[derive(Serialize, Clone)]
 pub struct FileStats {
     pub path: String,
     pub name: String,
     pub is_dir: bool,
     pub child_count: usize,
     pub has_children: bool,
-    
+    pub success: bool,
     pub depth: u32,
     pub index: u32,
     pub total: u32,
@@ -48,7 +45,7 @@ pub struct FileStats {
 #[derive(Debug)]
 pub enum OutputOption {
     Root,
-    All
+    All,
 }
 impl FromStr for OutputOption {
     type Err = &'static str;
