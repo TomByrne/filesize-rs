@@ -1,13 +1,12 @@
-use std::fs::{metadata, read_dir, read_link, DirEntry};
-use std::path::Path;
 use crate::options::Options;
 use crate::systems::FileSystem;
+use std::fs::{metadata, read_dir, read_link, DirEntry};
+use std::path::Path;
 
 pub struct Fs {}
 
 impl FileSystem for Fs {
-    fn is_valid(&self, path: &str, opts: &Options) -> bool
-    {
+    fn is_valid(&self, path: &str, opts: &Options) -> bool {
         // Check if this is a symlink, and abort if so (would need to solve symlink-loops)
         if let Ok(_) = read_link(path) {
             if opts.verbose {
@@ -18,14 +17,12 @@ impl FileSystem for Fs {
         return true;
     }
 
-    fn is_parent(&self, path: &str, _opts: &Options) -> bool
-    {
+    fn is_parent(&self, path: &str, _opts: &Options) -> bool {
         let as_path = Path::new(path);
         return as_path.is_dir();
     }
-    
-    fn get_children(&self, path: &str, opts: &Options) -> Option<Vec<String>>
-    {
+
+    fn get_children(&self, path: &str, opts: &Options) -> Option<Vec<String>> {
         match read_dir(path) {
             Err(e) => {
                 if opts.verbose {
@@ -45,29 +42,29 @@ impl FileSystem for Fs {
             }
         }
     }
-    
     // TODO: Fix this up
-    fn get_size(&self, path: &str, opts: &Options) -> Option<u64>
-    {
+    fn get_size(&self, path: &str, opts: &Options) -> Option<u64> {
         match metadata(path) {
             Err(err) => {
                 if opts.verbose {
-                    println!(
-                        "Failed to read file metadata ({}) {}",
-                        path,
-                        err
-                    )
+                    println!("Failed to read file metadata ({}) {}", path, err)
                 };
                 return None;
             }
-            Ok(meta) => return Some(meta.len())
+            Ok(meta) => return Some(meta.len()),
         }
     }
-    
-    
-    fn get_name(&self, path: &str, _opts: &Options) -> String
-    {
+
+    fn get_name(&self, path: &str, _opts: &Options) -> String {
         let as_path = Path::new(path);
-        return String::from(as_path.file_name().unwrap().to_str().unwrap());
+        match as_path.file_name() {
+            Some(name) => {
+                return String::from(name.to_str().unwrap());
+            }
+
+            None => {
+                return String::from(path);
+            }
+        }
     }
 }
